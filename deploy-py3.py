@@ -1,23 +1,23 @@
 import web
-from urllib.parse import urljoin
+from urlparse import parse_qs, urlparse
 import urllib
 import json
 import subprocess
 import os
 import requests
 import sys
-import slack
+import socket
+from slackclient import SlackClient
 urls = (
     '/deploy/(.*)', 'hello'
 )
-#python2.7 deploy.py 0.0.0.0 xxx xxx &
 app = web.application(urls, globals())
 token = sys.argv[2]
 slacktoken = sys.argv[3]
 homedir=os.getcwd()
-sc = slack.WebClient(token=os.environ[slacktoken])
-#sc.api_call("chat.postMessage",channel="#serverdeploy",text="-- started deploy server with token: "+token+" --")
-sc.chat_postMessage(channel="#serverdeploy",text="-- started deploy server with token: "+token+" --")
+hostname = socket.gethostname()
+sc = SlackClient(slacktoken)
+sc.api_call("chat.postMessage",channel="#serverdeploy",text="-- started deploy server "+ hostname +"with token: "+token+" --")
 class hello:
         def POST(self, name):                
                 output=''
@@ -25,7 +25,8 @@ class hello:
                         #runname=name.replace("/","_")
                         runname=name
                         
-                        slackmsg="==> Start Deploying "
+                        
+                        slackmsg="==> Start Deploying at "+ hostname+" "
                         querystr=parse_qs(urllib.unquote(web.data()))
                         maindir=os.getcwd()
                         packagename=querystr['pn'][0]
@@ -70,7 +71,7 @@ class hello:
 
                         slackmsg += "\n- Run ... "+"\n"
                         os.chdir(packagedir)
-                        cmdstr="nohup ./"+runningname
+                        cmdstr="./"+runningname
                         if argstr!="":
                                 cmdstr+=" "+argstr
                         cmdstr+=" &"
