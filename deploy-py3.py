@@ -10,8 +10,10 @@ import slack
 urls = (
     '/deploy/(.*)', 'hello'
 )
+#python2.7 deploy.py 0.0.0.0 xxx xxx &
 app = web.application(urls, globals())
 token = sys.argv[2]
+slacktoken = sys.argv[3]
 homedir=os.getcwd()
 sc = slack.WebClient(token=os.environ['xoxb-298302086051-Q5ZYSQxIndUCo05vD6QfAyQi'])
 #sc.api_call("chat.postMessage",channel="#serverdeploy",text="-- started deploy server with token: "+token+" --")
