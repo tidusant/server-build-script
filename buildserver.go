@@ -38,7 +38,7 @@ func main() {
 	var rootpath string
 	var servername string
 	//fmt.Println(mycrypto.Encode("abc,efc", 5))
-	// nohup ./buildserver --servername="aro4viet" -port=8081 -mytoken=xgdedkillaccnqweoiurpelksfcvnbsdw --gittoken=e4955a08780681068807698fae5ce99997cb430a &
+	// nohup ./buildserver --servername="aro4viet" -port=8081 --mytoken=xgdedkillaccnqweoiurpelksfcvnbsdw --gittoken=e4955a08780681068807698fae5ce99997cb430a &
 	flag.IntVar(&port, "port", 8081, "help message for flagname")
 	flag.StringVar(&slacktoken, "slacktoken", "xoxb-298302086051-SAQWpyog0n576OajH5JScPBz", "slacktoken")
 	flag.StringVar(&slackchannel, "slackchannel", "buildserver", "slackchannel")
@@ -139,7 +139,7 @@ func main() {
 				slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 
 				slackmsg = outputCmd("git clone -b " + branch + " https://" + gittoken + "@github.com/" + fullname + ".git " + repodir)
-
+				slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 				if strings.Index(slackmsg, "ERROR") > -1 {
 					slackmsg += "\n" + slackmsg + "\n QUIT"
 					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
