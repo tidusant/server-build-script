@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"time"
 	"math/rand"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/nlopes/slack"
 
@@ -38,9 +38,9 @@ func main() {
 	var rootpath string
 	var servername string
 	//fmt.Println(mycrypto.Encode("abc,efc", 5))
-	// nohup ./buildserver --servername="aro4viet" -port=8081 -mytoken=xgdedkillaccnqweoiurpelksfcvnbsdw --gittoken=e4955a08780681068807698fae5ce99997cb430a & 
+	// nohup ./buildserver --servername="aro4viet" -port=8081 -mytoken=xgdedkillaccnqweoiurpelksfcvnbsdw --gittoken=e4955a08780681068807698fae5ce99997cb430a &
 	flag.IntVar(&port, "port", 8081, "help message for flagname")
-	flag.StringVar(&slacktoken, "slacktoken", "xoxb-298302086051-Q5ZYSQxIndUCo05vD6QfAyQi", "slacktoken")
+	flag.StringVar(&slacktoken, "slacktoken", "xoxb-298302086051-SAQWpyog0n576OajH5JScPBz", "slacktoken")
 	flag.StringVar(&slackchannel, "slackchannel", "buildserver", "slackchannel")
 	flag.StringVar(&mytoken, "mytoken", "abc111", "mytoken")
 	flag.StringVar(&gittoken, "gittoken", "abc111", "gittoken")
@@ -123,106 +123,100 @@ func main() {
 
 				repodir := rootpath + "/repo/" + fullname
 				buildscriptdir := rootpath + "/repo/" + username + "/buildscript/" + reponame + "/" + branch
-				
+
 				// if _, err := os.Stat(repodir); os.IsNotExist(err) {
 				// 	slackmsg = "\n- MKDIR " + repodir
 				// 	slackmsg += outputCmd("mkdir " + repodir)
 				// 	slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 				// }
 				slackmsg = "\n- clear all file for checkout "
-				
-				slackmsg += outputCmd("rm -Rf " + repodir+"/")
+
+				slackmsg += outputCmd("rm -Rf " + repodir + "/")
 				slackmsg += outputCmd("mkdir " + repodir)
 				slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 
-				
 				slackmsg = "\n- GIT CLONE"
 				slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-			
-				output := outputCmd("git clone -b "+branch+" https://" + gittoken + "@github.com/" + fullname + ".git " + repodir)
-				slackmsg = string(output)
-				
-				if slackmsg != "" {
-					slackmsg += "\n" + slackmsg+"\n QUIT"
+
+				slackmsg = outputCmd("git clone -b " + branch + " https://" + gittoken + "@github.com/" + fullname + ".git " + repodir)
+
+				if strings.Index(slackmsg, "ERROR") > -1 {
+					slackmsg += "\n" + slackmsg + "\n QUIT"
 					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 					return
 				}
 				os.Chdir(repodir)
-					
 
 				/*
-				} else {
+					} else {
 
-					os.Chdir(repodir)
+						os.Chdir(repodir)
 
-					
-					// output, err := exec.Command("yes|", "rm","-R","./*").Output()
-					// slackmsg = "\n" + string(output)
-					// if err != nil {
-					// 	slackmsg += "\n" + fmt.Sprintf("error:%v", err) + "\n QUIT"
-					// 	slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-					// 	return
-					// }
-					// slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 
-					
+						// output, err := exec.Command("yes|", "rm","-R","./*").Output()
+						// slackmsg = "\n" + string(output)
+						// if err != nil {
+						// 	slackmsg += "\n" + fmt.Sprintf("error:%v", err) + "\n QUIT"
+						// 	slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+						// 	return
+						// }
+						// slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 
-					slackmsg = "\n- GIT CHECKOUT " + branch
-					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-					output, err := exec.Command("git", "checkout", branch).Output()
-					slackmsg = "\n" + string(output)
+
+
+						slackmsg = "\n- GIT CHECKOUT " + branch
+						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+						output, err := exec.Command("git", "checkout", branch).Output()
+						slackmsg = "\n" + string(output)
+						if err != nil {
+							slackmsg += "\n" + err.Error() + "\n QUIT"
+							slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+							return
+						}
+						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+
+						slackmsg = "\n- GIT RESET "
+						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+						output, err = exec.Command("git", "reset", "--hard").Output()
+						slackmsg = "\n" + string(output)
+						if err != nil {
+							slackmsg += "\n" + fmt.Sprintf("error:%v", err) + "\n QUIT"
+							slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+							return
+						}
+						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+					}
+
+
+					//go import === no need now
+					/*
+					file, err := os.Open(repodir + "/imports.txt")
 					if err != nil {
-						slackmsg += "\n" + err.Error() + "\n QUIT"
+						slackmsg = "\n" + err.Error()
 						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-						return
+					}
+					defer file.Close()
+					scanner := bufio.NewScanner(file)
+					slackmsg = ""
+					for scanner.Scan() {
+						line := scanner.Text()
+
+						if strings.Trim(line, " ") == "" || line[:1] == "#" {
+							continue
+						}
+						slackmsg += "\n- go get " + line
+
+						output := outputCmd("go get " + line)
+						if output != "" {
+							//exit when error
+							slackmsg += output + "\nQUIT"
+							slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+							return
+						}
+
 					}
 					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-
-					slackmsg = "\n- GIT RESET "
-					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-					output, err = exec.Command("git", "reset", "--hard").Output()
-					slackmsg = "\n" + string(output)
-					if err != nil {
-						slackmsg += "\n" + fmt.Sprintf("error:%v", err) + "\n QUIT"
-						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-						return
-					}
-					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-				}
-
-
-				//go import === no need now
-				/*
-				file, err := os.Open(repodir + "/imports.txt")
-				if err != nil {
-					slackmsg = "\n" + err.Error()
-					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-				}
-				defer file.Close()
-				scanner := bufio.NewScanner(file)
-				slackmsg = ""
-				for scanner.Scan() {
-					line := scanner.Text()
-
-					if strings.Trim(line, " ") == "" || line[:1] == "#" {
-						continue
-					}
-					slackmsg += "\n- go get " + line
-
-					output := outputCmd("go get " + line)
-					if output != "" {
-						//exit when error
-						slackmsg += output + "\nQUIT"
-						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-						return
-					}
-
-				}
-				slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 				*/
-
-
-
 
 				//=========== deploy config
 				file, err := os.Open(buildscriptdir + "/deploy.txt")
@@ -308,7 +302,7 @@ func main() {
 				}
 
 				slackapi.PostMessage(slackchannel, slack.MsgOptionText("Create package "+randomnumber, false))
-				
+
 				// output2, err := exec.Command("tar","-czf",packagepath + packagename + "/" + randomnumber + ".pkg",htmlFolder,htmlData,runningname,"config.toml").Output()
 				// slackmsg = "\n" + string(output2)
 				// if err != nil {
@@ -320,7 +314,6 @@ func main() {
 
 				slackmsg += outputCmd("tar -czf " + packagepath + packagename + "/" + randomnumber + ".pkg " + htmlFolder + " " + htmlData + " " + runningname + " config.toml")
 				slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-				
 
 				slackmsg = ""
 				os.Chdir(rootpath)
@@ -398,11 +391,12 @@ func outputCmd(cmdstr string) string {
 	cmd.Env = os.Environ()
 	//output, err := cmd.Output()
 	err := cmd.Run()
-
+	rt += "\n" + out.String()
 	if err != nil {
 		rt += "\nrunning " + cmdstr
 		rt += " ERROR: " + stderr.String()
+
 	}
-	rt += "\n" + out.String()
+
 	return rt
 }
