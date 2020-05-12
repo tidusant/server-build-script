@@ -15,11 +15,11 @@ urls = (
 app = web.application(urls, globals())
 token = sys.argv[2]
 slacktoken = sys.argv[3]
-channel = sys.argv[4]
+slackchannel = sys.argv[4]
 homedir=os.getcwd()
 hostname = socket.gethostname()
 sc = SlackClient(slacktoken)
-sc.api_call("chat.postMessage",channel="#serverdeploy",text="-- started deploy server "+ hostname +"with token: "+token+" --")
+sc.api_call("chat.postMessage",channel="#"+slackchannel,text="-- started server with token: "+token+" --")
 class hello:
         def POST(self, name):                
                 output=''
@@ -45,7 +45,7 @@ class hello:
                         slackmsg += "\n- argstr: " + argstr
                         slackmsg += "\n- packageserver: " + packageserver
                         slackmsg += "\n- token: " + name
-                        sc.api_call("chat.postMessage",channel="#serverdeploy",text=slackmsg)
+                        sc.api_call("chat.postMessage",channel="#"+slackchannel,text=slackmsg)
                         slackmsg = "==> Package " + packagename + " Deployed <=="
                         slackmsg += "\n- Pull package " + randomnumber + "..."+"\n"
                         try:
@@ -77,11 +77,11 @@ class hello:
                         if argstr!="":
                                 cmdstr+=" "+argstr
                         cmdstr+=" &"
-                        sc.api_call("chat.postMessage",channel="#serverdeploy",text=cmdstr)
+                        sc.api_call("chat.postMessage",channel="#"+slackchannel,text=cmdstr)
                         try:
                                 os.system(cmdstr)
                                 slackmsg += "\n- Deploy SUCCESS "
-                                sc.api_call("chat.postMessage",channel="#serverdeploy",text=slackmsg)
+                                sc.api_call("chat.postMessage",channel="#"+slackchannel,text=slackmsg)
                         except Exception as detail:
                                 slackmsg+=str(detail)
                         os.chdir(maindir)
