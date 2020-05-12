@@ -11,6 +11,7 @@ from slackclient import SlackClient
 urls = (
     '/deploy/(.*)', 'hello'
 )
+#nohup python deploy.py 0.0.0.0 xgdedkillaccnqweoiurpelksfcvnbsdw xoxb-298302086051-DHDKqKtWlxXT9RhWW027jR2I & 
 app = web.application(urls, globals())
 token = sys.argv[2]
 slacktoken = sys.argv[3]
