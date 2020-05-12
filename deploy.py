@@ -11,10 +11,11 @@ from slackclient import SlackClient
 urls = (
     '/deploy/(.*)', 'hello'
 )
-#nohup python deploy.py 0.0.0.0 xgdedkillaccnqweoiurpelksfcvnbsdw xoxb-298302086051-DHDKqKtWlxXT9RhWW027jR2I & 
+#nohup python deploy.py 0.0.0.0 xgdedkillaccnqweoiurpelksfcvnbsdw xoxb-298302086051-90MzkTjXOaRq6qJPY96byBX0 serverdev & 
 app = web.application(urls, globals())
 token = sys.argv[2]
 slacktoken = sys.argv[3]
+channel = sys.argv[4]
 homedir=os.getcwd()
 hostname = socket.gethostname()
 sc = SlackClient(slacktoken)
