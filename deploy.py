@@ -11,7 +11,7 @@ from slackclient import SlackClient
 urls = (
     '/deploy/(.*)', 'hello'
 )
-#nohup python deploy.py 0.0.0.0 xgdedkillaccnqweoiurpelksfcvnbsdw xoxb-298302086051-90MzkTjXOaRq6qJPY96byBX0 serverdev & 
+#nohup python deploy.py 0.0.0.0 xgdedkillaccnqweoiurpelksfcvnbsdw slacktoken serverdev & 
 app = web.application(urls, globals())
 token = sys.argv[2]
 slacktoken = sys.argv[3]
@@ -72,6 +72,7 @@ class hello:
                         
 
                         slackmsg += "\n- Run ... "+"\n"
+                        sc.api_call("chat.postMessage",channel="#"+slackchannel,text=slackmsg)
                         os.chdir(packagedir)
                         cmdstr="./"+runningname
                         if argstr!="":
@@ -79,11 +80,11 @@ class hello:
                         cmdstr+=" &"
                         sc.api_call("chat.postMessage",channel="#"+slackchannel,text=cmdstr)
                         try:
-                                os.system(cmdstr)
-                                slackmsg += "\n- Deploy SUCCESS "
-                                sc.api_call("chat.postMessage",channel="#"+slackchannel,text=slackmsg)
+                                os.system(cmdstr)                               
+                                sc.api_call("chat.postMessage",channel="#"+slackchannel,text="Deploy SUCCESS")
                         except Exception as detail:
-                                slackmsg+=str(detail)
+                                sc.api_call("chat.postMessage",channel="#"+slackchannel,text=string(detail))
+                                sc.api_call("chat.postMessage",channel="#"+slackchannel,text="QUIT")
                         os.chdir(maindir)
                         slackmsg += "\n- remove deploypackages: "
                         try:

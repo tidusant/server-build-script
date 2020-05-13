@@ -141,8 +141,9 @@ func main() {
 				slackmsg = outputCmd("git clone -b " + branch + " https://" + gittoken + "@github.com/" + fullname + ".git " + repodir)
 				slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 				if strings.Index(slackmsg, "ERROR") > -1 {
-					slackmsg += "\n" + slackmsg + "\n QUIT"
+					slackmsg += "\n" + slackmsg 
 					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+					slackapi.PostMessage(slackchannel, slack.MsgOptionText("QUIT", false))
 					return
 				}
 				os.Chdir(repodir)
@@ -274,8 +275,9 @@ func main() {
 				slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
 				outputcompile := outputCmd("env CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o " + runningname + " .")
 				if strings.TrimSpace(outputcompile) != "" {
-					slackmsg = "\nERROR:" + outputcompile + "\nQUIT"
+					slackmsg = "\nERROR:" + outputcompile 
 					slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
+					slackapi.PostMessage(slackchannel, slack.MsgOptionText("QUIT", false))
 					return
 				}
 				slackmsg = " DONE"
