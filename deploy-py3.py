@@ -1,25 +1,21 @@
 import web
-from urlparse import parse_qs, urlparse
+from urllib.parse import urljoin
 import urllib
 import json
 import subprocess
 import os
 import requests
 import sys
-import socket
-from slackclient import SlackClient
+import slack
 urls = (
     '/deploy/(.*)', 'hello'
 )
-#nohup python deploy.py 0.0.0.0 xgdedkillaccnqweoiurpelksfcvnbsdw slacktoken serverdev & 
 app = web.application(urls, globals())
 token = sys.argv[2]
-slacktoken = sys.argv[3]
-slackchannel = sys.argv[4]
 homedir=os.getcwd()
-hostname = socket.gethostname()
-sc = SlackClient(slacktoken)
-sc.api_call("chat.postMessage",channel="#"+slackchannel,text="-- started server with token: "+token+" --")
+sc = slack.WebClient(token=os.environ['xoxb-298302086051-Q5ZYSQxIndUCo05vD6QfAyQi'])
+#sc.api_call("chat.postMessage",channel="#serverdeploy",text="-- started deploy server with token: "+token+" --")
+sc.chat_postMessage(channel="#serverdeploy",text="-- started deploy server with token: "+token+" --")
 class hello:
         def POST(self, name):                
                 output=''
@@ -27,8 +23,7 @@ class hello:
                         #runname=name.replace("/","_")
                         runname=name
                         
-                        
-                        slackmsg="==> Start Deploying at "+ hostname+" "
+                        slackmsg="==> Start Deploying "
                         querystr=parse_qs(urllib.unquote(web.data()))
                         maindir=os.getcwd()
                         packagename=querystr['pn'][0]
@@ -45,7 +40,7 @@ class hello:
                         slackmsg += "\n- argstr: " + argstr
                         slackmsg += "\n- packageserver: " + packageserver
                         slackmsg += "\n- token: " + name
-                        sc.api_call("chat.postMessage",channel="#"+slackchannel,text=slackmsg)
+                        sc.api_call("chat.postMessage",channel="#serverdeploy",text=slackmsg)
                         slackmsg = "==> Package " + packagename + " Deployed <=="
                         slackmsg += "\n- Pull package " + randomnumber + "..."+"\n"
                         try:
@@ -72,19 +67,18 @@ class hello:
                         
 
                         slackmsg += "\n- Run ... "+"\n"
-                        sc.api_call("chat.postMessage",channel="#"+slackchannel,text=slackmsg)
                         os.chdir(packagedir)
-                        cmdstr="./"+runningname
+                        cmdstr="nohup ./"+runningname
                         if argstr!="":
                                 cmdstr+=" "+argstr
                         cmdstr+=" &"
-                        sc.api_call("chat.postMessage",channel="#"+slackchannel,text=cmdstr)
+                        sc.api_call("chat.postMessage",channel="#serverdeploy",text=cmdstr)
                         try:
-                                os.system(cmdstr)                               
-                                sc.api_call("chat.postMessage",channel="#"+slackchannel,text="Deploy SUCCESS")
+                                os.system(cmdstr)
+                                slackmsg += "\n- Deploy SUCCESS "
+                                sc.api_call("chat.postMessage",channel="#serverdeploy",text=slackmsg)
                         except Exception as detail:
-                                sc.api_call("chat.postMessage",channel="#"+slackchannel,text=string(detail))
-                                sc.api_call("chat.postMessage",channel="#"+slackchannel,text="QUIT")
+                                slackmsg+=str(detail)
                         os.chdir(maindir)
                         slackmsg += "\n- remove deploypackages: "
                         try:
