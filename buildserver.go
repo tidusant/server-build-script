@@ -40,6 +40,7 @@ func main() {
 	var gittoken string
 
 	var rootpath string
+	var gopath string
 	var servername string
 	//fmt.Println(mycrypto.Encode("abc,efc", 5))
 
@@ -48,8 +49,7 @@ func main() {
 	flag.StringVar(&slackchannel, "slackchannel", "buildserver", "slackchannel")
 	flag.StringVar(&mytoken, "mytoken", "abc111", "mytoken")
 	flag.StringVar(&gittoken, "gittoken", "abc111", "gittoken")
-	flag.StringVar(&rootpath, "rootpath", "/home/ec2-user", "root path")
-	flag.StringVar(&rootpath, "gopath", "/home/ec2-user", "root path")
+
 	flag.StringVar(&servername, "servername", "phubuildserver", "server name")
 	flag.BoolVar(&debug, "debug", false, "Indicates if debug messages should be printed in log files")
 	flag.Parse()
@@ -74,17 +74,16 @@ func main() {
 	//init config
 
 	router := gin.Default()
-
+	rootpath = "/root"
+	gopath = "/root/go/src/"
 	router.POST("/:action/:name", func(c *gin.Context) {
-		packageserver := "http://" + GetOutboundIP() + "/"
-
 		strrt := ""
 		c.Header("Access-Control-Allow-Origin", "*")
 		name := c.Param("name")
 		//name = name[1:] //remove slash
 		action := c.Param("action")
-		userIP, _, _ := net.SplitHostPort(c.Request.RemoteAddr)
-		slackmsg("\n\n==> Start building from " + userIP + " on " + packageserver + "<==")
+
+		slackmsg("\n\n==> Start building on " + servername + "<==")
 
 		x, _ := ioutil.ReadAll(c.Request.Body)
 		datastr := strings.Replace(string(x), "payload=", "", 1)
@@ -117,82 +116,80 @@ func main() {
 			return
 		} else if mytoken == name {
 			if action == "serverbuild" {
-
+				os.Chdir(rootpath)
 				repodir := rootpath + "/repo/" + fullname
 				buildscriptdir := rootpath + "/repo/" + username + "/buildscript/" + reponame + "/" + branch
 
-				// if _, err := os.Stat(repodir); os.IsNotExist(err) {
-				// 	slackmsg = "\n- MKDIR " + repodir
-				// 	slackmsg += outputCmd("mkdir " + repodir)
-				// 	slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-				// }
-
-				if outputCmd("rm -Rf "+repodir+"/") != true {
-					return
+				if _, err := os.Stat(repodir); os.IsNotExist(err) {
+					outputCmd("mkdir -p " + repodir)
+					if outputCmd("git clone -b "+branch+" https://"+gittoken+"@github.com/"+fullname+".git "+repodir) != true {
+						return
+					}
 				}
-				outputCmd("mkdir " + repodir)
-				if outputCmd("git clone -b "+branch+" https://"+gittoken+"@github.com/"+fullname+".git "+repodir) != true {
-					return
-				}
-
+				slackmsg("change dir: " + repodir )
 				os.Chdir(repodir)
 
-				/*
-					} else {
-
-						os.Chdir(repodir)
-
-
-						// output, err := exec.Command("yes|", "rm","-R","./*").Output()
-						// slackmsg = "\n" + string(output)
-						// if err != nil {
-						// 	slackmsg += "\n" + fmt.Sprintf("error:%v", err) + "\n QUIT"
-						// 	slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-						// 	return
-						// }
-						// slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-
-
-
-						slackmsg = "\n- GIT CHECKOUT " + branch
-						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-						output, err := exec.Command("git", "checkout", branch).Output()
-						slackmsg = "\n" + string(output)
-						if err != nil {
-							slackmsg += "\n" + err.Error() + "\n QUIT"
-							slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-							return
-						}
-						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-
-						slackmsg = "\n- GIT RESET "
-						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-						output, err = exec.Command("git", "reset", "--hard").Output()
-						slackmsg = "\n" + string(output)
-						if err != nil {
-							slackmsg += "\n" + fmt.Sprintf("error:%v", err) + "\n QUIT"
-							slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-							return
-						}
-						slackapi.PostMessage(slackchannel, slack.MsgOptionText(slackmsg, false))
-					}
-				*/
+				//reset hard, change branch then get latest version
+				if outputCmd("git reset --hard") != true || outputCmd("git checkout "+branch) != true || outputCmd("git pull origin") != true {
+					return
+				}
 
 				//go import === no need now
-
+				slackmsg("readfile: " + repodir + "/import.txt")
 				file, err := os.Open(repodir + "/import.txt")
 				if err != nil {
 					slackmsg("ERROR: " + err.Error())
 				} else {
+					instruction := ""
 					scanner := bufio.NewScanner(file)
 					for scanner.Scan() {
-						line := scanner.Text()
-						if strings.Trim(line, " ") == "" || line[:1] == "#" {
+						line := strings.Trim(scanner.Text()," ")
+						if strings.Trim(line, " ") == "" {
 							continue
 						}
-						if outputCmd("go get "+line) != true {
-							return
+						if instruction != line && line[:1] == "#" {
+							instruction = line
+							continue
 						}
+						if instruction == "#import" {
+							if outputCmd("go get "+line) != true {
+								return
+							}
+						}
+						if instruction == "#checkout" {
+							slackmsg("\nLOAD library: " + line)
+							golibpath := gopath + line
+							//if not get the lib yet, then go get,
+							//then change branch,
+							//then pull latest version
+							if _, err := os.Stat(golibpath); os.IsNotExist(err) {
+								if outputCmd("git clone -b "+branch+" https://"+gittoken+"@github.com/"+strings.Replace(line, "github.com/", "", -1) +".git "+golibpath) != true {
+									return
+								}
+								//read file import.txt to get other library need from this library
+								slackmsg("readfile: " + golibpath + "/import.txt")
+								file2, err2 := os.Open(golibpath + "/import.txt")		
+								if err2 != nil {
+									slackmsg("ERROR: " + err2.Error())
+								} else {
+									
+									scanner2 := bufio.NewScanner(file2)
+									for scanner2.Scan() {
+										line2 := scanner2.Text()
+										if outputCmd("go get "+line2) != true {
+											return
+										}
+									}
+								}						
+							}
+							slackmsg("change dir: " + golibpath )
+							os.Chdir(golibpath)
+							if outputCmd("git checkout "+branch) != true || outputCmd("git pull origin") != true {
+								return
+							}
+
+						}
+
 					}
 				}
 				defer file.Close()
@@ -201,6 +198,8 @@ func main() {
 				var serverdeploys []string
 				var app_prefix string
 				var argstr string
+				var packageserver string
+				slackmsg("readfile: " + buildscriptdir + "/deploy.txt")
 				file, err = os.Open(buildscriptdir + "/deploy.txt")
 				if err != nil {
 					slackmsg("ERROR: " + err.Error())
@@ -211,8 +210,8 @@ func main() {
 					instruction := ""
 
 					for scanner.Scan() {
-						line := scanner.Text()
-						if strings.Trim(line, " ") == "" {
+						line := strings.Trim(scanner.Text()," ")
+						if line == "" {
 							continue
 						}
 						if instruction != line && line[:1] == "#" {
@@ -244,8 +243,10 @@ func main() {
 				}
 
 				//build go
-				packagename := reponame
-				runningname := strings.Replace(packagename, "-", "", -1) + app_prefix
+				slackmsg("change dir: " + repodir )
+				os.Chdir(repodir)
+				
+				runningname := strings.Replace(reponame, "-", "", -1) + app_prefix
 				if outputCmd("env CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o "+runningname+" .") != true {
 					return
 				}
@@ -255,9 +256,9 @@ func main() {
 				randomnumber := strconv.Itoa(r.Intn(1000000000))
 
 				//remove old package
-				packagepath := "/var/www/repo_publish/" + branch + "/"
-				outputCmd("rm -f -R " + packagepath + packagename)
-				outputCmd("mkdir " + packagepath + packagename)
+				packagepath := "/var/www/repo_publish/" + branch + "/"+app_prefix+ "/"
+				outputCmd("rm -f -R " + packagepath + reponame)
+				outputCmd("mkdir -p " + packagepath + reponame)
 
 				//check folder data & html exit
 				var htmlFolder = ""
@@ -269,18 +270,18 @@ func main() {
 					htmlData = "data"
 				}
 
-				if outputCmd("tar -czf "+packagepath+packagename+"/"+randomnumber+".pkg "+htmlFolder+" "+htmlData+" "+runningname+" config.toml") != true {
-					return
-				}
+				outputCmd("tar -czf "+packagepath+reponame+"/"+randomnumber+".pkg "+htmlFolder+" "+htmlData+" "+runningname+" config.toml")
+				
+				
 
 				os.Chdir(rootpath)
 				//deploy server:
 				for _, server := range serverdeploys {
 
-					go func(server, mytoken, packagename, app_prefix, randomnumber, argstr, packageserver, username string) {
+					go func(server, mytoken, reponame, app_prefix, randomnumber, argstr, packageserver, username string) {
 						slackmsg2 := "\n- Trigger server:" + server + "deploy/" + mytoken
 						form := url.Values{}
-						form.Add("pn", packagename)
+						form.Add("reponame", reponame)
 						form.Add("rn", randomnumber)
 						form.Add("ag", argstr)
 						form.Add("sv", packageserver)
@@ -293,7 +294,7 @@ func main() {
 						req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 						hc := http.Client{}
 						hc.Do(req)
-					}(server, mytoken, packagename, app_prefix, randomnumber, argstr, packageserver, username)
+					}(server, mytoken, reponame, app_prefix, randomnumber, argstr, packageserver, username)
 
 				}
 			} else {
@@ -329,6 +330,7 @@ func slackmsg(message string) {
 }
 func outputCmd(cmdstr string) bool {
 	rt := true
+	slackmsg(cmdstr)
 	args := strings.Split(cmdstr, " ")
 
 	// if len(args) > 1 {
